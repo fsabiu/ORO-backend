@@ -1,0 +1,12 @@
+# Oracle Database Dependencies
+oracledb>=1.4.0
+
+# Environment Variables
+python-dotenv>=1.0.0
+
+# Testing Dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Logging and Utilities
+colorlog>=6.7.0
