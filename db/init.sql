@@ -3,22 +3,7 @@
 -- =============================================================================
 
 -- Clean up previous installations (optional, for development)
-BEGIN
-  EXECUTE IMMEDIATE 'DROP TABLE NOTIFICATIONS';
-  EXECUTE IMMEDIATE 'DROP TABLE DETECTIONS';
-  EXECUTE IMMEDIATE 'DROP TABLE RULESETS';
-  EXECUTE IMMEDIATE 'DROP TABLE REPORTS';
-EXCEPTION
-  WHEN OTHERS THEN
-    IF SQLCODE != -942 THEN
-      RAISE;
-    END IF;
-END;
-/
-
--- Clear old metadata entries to prevent errors on re-run
-DELETE FROM USER_SDO_GEOM_METADATA WHERE TABLE_NAME IN ('REPORTS', 'RULESETS', 'DETECTIONS');
-COMMIT;
+-- Note: These DROP statements are handled by the Python script for better error handling
 
 
 -- =============================================================================
