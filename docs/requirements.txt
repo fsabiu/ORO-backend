@@ -10,25 +10,6 @@ Bucket structure
 ----------- .....
 
 
-DB structure
-REPORTS
-id, timestamp, bucket_img_path, bucket_detection_path, area_of_interest (geometry)
-
-REPORTS_DETECTIONS
-report_id, detection_id, timestamp, ruleset_id, author_id
-
-DETECTIONS
-detection id, class, x1, y1, x2, y2, x3, y3, x4, y4 confidence, latitude, longitude
-
-RULESET
-id, name, rules
-
-USERS
-
-NOTIFICATIONS
-id, status, ruleset_id, priority, center_coords, summary(static atm), detection_id
-
-
 
 Endpoints:
 

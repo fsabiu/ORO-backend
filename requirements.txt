@@ -4,9 +4,15 @@ oracledb>=1.4.0
 # Environment Variables
 python-dotenv>=1.0.0
 
+# FastAPI and Web Server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+
 # Testing Dependencies
 pytest>=7.0.0
 pytest-cov>=4.0.0
+httpx>=0.25.0
 
 # Logging and Utilities
 colorlog>=6.7.0
