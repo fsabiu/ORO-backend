@@ -31,3 +31,48 @@ Endpoints:
 /classes # All potential objects with object id
 
 /models # Detection models (model_id, model_name)
+
+
+
+Ruleset example
+{
+        rulesetId: 1,
+        rulesetName: "City Reconnaisance",
+        description:
+            "Policy for civilian city reconnaissance and adjacent missions",
+        userGroups: ["francesco@company.com", "claudia@comany.com"],
+        conditions: [
+            {
+                object_name: "Large Vehicles",
+                condition: "more than",
+                count: 20,
+                //logical_operator?: 'AND' || 'OR' - never appears on first object
+            },
+            {
+                object_id: 2,
+                object_name: "Civilian cars",
+                condition: "less than",
+                count: 5,
+                logical_operator: "AND",
+            },
+            {
+                object_id: 3,
+                object_name: "Aircrafts",
+                condition: "more than", //[more than, less than] future impl: object disappears, object appears]
+                count: 3,
+                logical_operator: "OR",
+            },
+        ],
+        author: "Wilhelm Matuszewski",
+        date: "02/09/2025",
+        area_of_interest: {
+            type: "Polygon",
+            coordinates: [[
+                [-74.0059, 40.7128],
+                [-73.9352, 40.7128],
+                [-73.9352, 40.7589],
+                [-74.0059, 40.7589],
+                [-74.0059, 40.7128]
+            ]]
+        }
+}

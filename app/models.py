@@ -5,7 +5,7 @@ This module defines the data models used for API requests and responses,
 ensuring proper data validation and type safety.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field, validator
 import json
@@ -24,25 +24,81 @@ class GeometryBase(BaseModel):
         return v
 
 
+class Condition(BaseModel):
+    """Model for individual rule conditions."""
+    object_id: Optional[int] = Field(None, description="Object ID (optional)")
+    object_name: str = Field(..., description="Name of the object to detect")
+    condition: str = Field(..., description="Condition type (e.g., 'more than', 'less than')")
+    count: int = Field(..., ge=0, description="Count threshold for the condition")
+    logical_operator: Optional[str] = Field(None, description="Logical operator for combining conditions ('AND', 'OR')")
+    
+    @validator('condition')
+    def validate_condition(cls, v):
+        allowed_conditions = ['more than', 'less than', 'equals', 'not equals']
+        if v not in allowed_conditions:
+            raise ValueError(f'Condition must be one of: {", ".join(allowed_conditions)}')
+        return v
+    
+    @validator('logical_operator')
+    def validate_logical_operator(cls, v):
+        if v is not None:
+            allowed_operators = ['AND', 'OR']
+            if v not in allowed_operators:
+                raise ValueError(f'Logical operator must be one of: {", ".join(allowed_operators)}')
+        return v
+
+
 class RulesetCreate(BaseModel):
     """Model for creating a new ruleset."""
     name: str = Field(..., min_length=1, max_length=255, description="Ruleset name")
     description: Optional[str] = Field(None, max_length=1024, description="Ruleset description")
-    user_groups: Optional[Dict[str, Any]] = Field(None, description="User groups configuration")
-    conditions: Optional[Dict[str, Any]] = Field(None, description="Rule conditions")
+    user_groups: List[str] = Field(..., description="List of user group email addresses")
+    conditions: List[Condition] = Field(..., description="List of rule conditions")
     area_of_interest: GeometryBase = Field(..., description="Geographic area of interest")
     author: str = Field(..., min_length=1, max_length=255, description="Author name")
+    
+    @validator('user_groups')
+    def validate_user_groups(cls, v):
+        if not v:
+            raise ValueError('At least one user group must be specified')
+        return v
+    
+    @validator('conditions')
+    def validate_conditions(cls, v):
+        if not v:
+            raise ValueError('At least one condition must be specified')
+        # First condition should not have logical_operator
+        if v and v[0].logical_operator is not None:
+            raise ValueError('First condition cannot have a logical operator')
+        return v
     
     class Config:
         json_schema_extra = {
             "example": {
-                "name": "Urban Area Monitoring",
-                "description": "Monitor urban areas for vehicle detection",
-                "user_groups": ["admin", "analyst"],
-                "conditions": {
-                    "min_confidence": 0.8,
-                    "object_types": ["car", "truck", "bus"]
-                },
+                "name": "City Reconnaissance",
+                "description": "Policy for civilian city reconnaissance and adjacent missions",
+                "user_groups": ["francesco@company.com", "claudia@company.com"],
+                "conditions": [
+                    {
+                        "object_name": "Large Vehicles",
+                        "condition": "more than",
+                        "count": 20
+                    },
+                    {
+                        "object_id": 2,
+                        "object_name": "Civilian cars",
+                        "condition": "less than",
+                        "count": 5,
+                        "logical_operator": "AND"
+                    },
+                    {
+                        "object_id": 3,
+                        "object_name": "Aircrafts",
+                        "condition": "more than",
+                        "count": 3,
+                        "logical_operator": "OR"
+                    }
+                ],
                 "area_of_interest": {
                     "type": "Polygon",
                     "coordinates": [[
@@ -53,7 +109,7 @@ class RulesetCreate(BaseModel):
                         [-74.0059, 40.7128]
                     ]]
                 },
-                "author": "admin@example.com"
+                "author": "Wilhelm Matuszewski"
             }
         }
 
@@ -62,10 +118,26 @@ class RulesetUpdate(BaseModel):
     """Model for updating an existing ruleset."""
     name: Optional[str] = Field(None, min_length=1, max_length=255, description="Ruleset name")
     description: Optional[str] = Field(None, max_length=1024, description="Ruleset description")
-    user_groups: Optional[Dict[str, Any]] = Field(None, description="User groups configuration")
-    conditions: Optional[Dict[str, Any]] = Field(None, description="Rule conditions")
+    user_groups: Optional[List[str]] = Field(None, description="List of user group email addresses")
+    conditions: Optional[List[Condition]] = Field(None, description="List of rule conditions")
     area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
     author: Optional[str] = Field(None, min_length=1, max_length=255, description="Author name")
+    
+    @validator('user_groups')
+    def validate_user_groups(cls, v):
+        if v is not None and not v:
+            raise ValueError('User groups list cannot be empty')
+        return v
+    
+    @validator('conditions')
+    def validate_conditions(cls, v):
+        if v is not None:
+            if not v:
+                raise ValueError('Conditions list cannot be empty')
+            # First condition should not have logical_operator
+            if v and v[0].logical_operator is not None:
+                raise ValueError('First condition cannot have a logical operator')
+        return v
 
 
 class RulesetResponse(BaseModel):
@@ -73,8 +145,8 @@ class RulesetResponse(BaseModel):
     id: int = Field(..., description="Ruleset ID")
     name: str = Field(..., description="Ruleset name")
     description: Optional[str] = Field(None, description="Ruleset description")
-    user_groups: Optional[Dict[str, Any]] = Field(None, description="User groups configuration")
-    conditions: Optional[Dict[str, Any]] = Field(None, description="Rule conditions")
+    user_groups: List[str] = Field(..., description="List of user group email addresses")
+    conditions: List[Condition] = Field(..., description="List of rule conditions")
     area_of_interest: GeometryBase = Field(..., description="Geographic area of interest")
     author: str = Field(..., description="Author name")
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
@@ -85,13 +157,30 @@ class RulesetResponse(BaseModel):
         json_schema_extra = {
             "example": {
                 "id": 1,
-                "name": "Urban Area Monitoring",
-                "description": "Monitor urban areas for vehicle detection",
-                "user_groups": ["admin", "analyst"],
-                "conditions": {
-                    "min_confidence": 0.8,
-                    "object_types": ["car", "truck", "bus"]
-                },
+                "name": "City Reconnaissance",
+                "description": "Policy for civilian city reconnaissance and adjacent missions",
+                "user_groups": ["francesco@company.com", "claudia@company.com"],
+                "conditions": [
+                    {
+                        "object_name": "Large Vehicles",
+                        "condition": "more than",
+                        "count": 20
+                    },
+                    {
+                        "object_id": 2,
+                        "object_name": "Civilian cars",
+                        "condition": "less than",
+                        "count": 5,
+                        "logical_operator": "AND"
+                    },
+                    {
+                        "object_id": 3,
+                        "object_name": "Aircrafts",
+                        "condition": "more than",
+                        "count": 3,
+                        "logical_operator": "OR"
+                    }
+                ],
                 "area_of_interest": {
                     "type": "Polygon",
                     "coordinates": [[
@@ -102,7 +191,7 @@ class RulesetResponse(BaseModel):
                         [-74.0059, 40.7128]
                     ]]
                 },
-                "author": "admin@example.com",
+                "author": "Wilhelm Matuszewski",
                 "created_at": "2024-01-15T10:30:00Z",
                 "updated_at": "2024-01-15T10:30:00Z"
             }
@@ -122,7 +211,16 @@ class RulesetListResponse(BaseModel):
                 "rulesets": [
                     {
                         "id": 1,
-                        "name": "Urban Area Monitoring",
+                        "name": "City Reconnaissance",
+                        "description": "Policy for civilian city reconnaissance and adjacent missions",
+                        "user_groups": ["francesco@company.com", "claudia@company.com"],
+                        "conditions": [
+                            {
+                                "object_name": "Large Vehicles",
+                                "condition": "more than",
+                                "count": 20
+                            }
+                        ],
                         "area_of_interest": {
                             "type": "Polygon",
                             "coordinates": [[
@@ -133,8 +231,9 @@ class RulesetListResponse(BaseModel):
                                 [-74.0059, 40.7128]
                             ]]
                         },
-                        "author_id": 1,
-                        "created_at": "2024-01-15T10:30:00Z"
+                        "author": "Wilhelm Matuszewski",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z"
                     }
                 ],
                 "total": 1,

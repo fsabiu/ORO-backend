@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from ..database import Database
-from ..models import RulesetCreate, RulesetUpdate, RulesetResponse, GeometryBase
+from ..models import RulesetCreate, RulesetUpdate, RulesetResponse, GeometryBase, Condition
 
 
 class RulesetService:
@@ -43,7 +43,7 @@ class RulesetService:
         
         # Convert JSON fields to strings for Oracle
         user_groups_json = json.dumps(ruleset_data.user_groups) if ruleset_data.user_groups else None
-        conditions_json = json.dumps(ruleset_data.conditions) if ruleset_data.conditions else None
+        conditions_json = json.dumps([condition.dict() for condition in ruleset_data.conditions]) if ruleset_data.conditions else None
         
         # Insert the ruleset
         query = """
@@ -101,8 +101,9 @@ class RulesetService:
         area_of_interest = self._sdo_to_geometry(ruleset['AREA_OF_INTEREST'])
         
         # Parse JSON fields
-        user_groups = json.loads(ruleset['USER_GROUPS']) if ruleset['USER_GROUPS'] else None
-        conditions = json.loads(ruleset['CONDITIONS']) if ruleset['CONDITIONS'] else None
+        user_groups = json.loads(ruleset['USER_GROUPS']) if ruleset['USER_GROUPS'] else []
+        conditions_data = json.loads(ruleset['CONDITIONS']) if ruleset['CONDITIONS'] else []
+        conditions = [Condition(**condition) for condition in conditions_data]
         
         return RulesetResponse(
             id=ruleset['ID'],
@@ -159,8 +160,9 @@ class RulesetService:
             area_of_interest = self._sdo_to_geometry(result['AREA_OF_INTEREST'])
             
             # Parse JSON fields
-            user_groups = json.loads(result['USER_GROUPS']) if result['USER_GROUPS'] else None
-            conditions = json.loads(result['CONDITIONS']) if result['CONDITIONS'] else None
+            user_groups = json.loads(result['USER_GROUPS']) if result['USER_GROUPS'] else []
+            conditions_data = json.loads(result['CONDITIONS']) if result['CONDITIONS'] else []
+            conditions = [Condition(**condition) for condition in conditions_data]
             
             rulesets.append(RulesetResponse(
                 id=result['ID'],
@@ -216,7 +218,7 @@ class RulesetService:
             params['user_groups'] = user_groups_json
         
         if ruleset_data.conditions is not None:
-            conditions_json = json.dumps(ruleset_data.conditions)
+            conditions_json = json.dumps([condition.dict() for condition in ruleset_data.conditions])
             update_fields.append("conditions = :conditions")
             params['conditions'] = conditions_json
         
