@@ -1,0 +1,52 @@
+
+Bucket structure
+--data/
+------image1.geotiff
+------image2.geotiff
+------image3.geotiff
+--detections/
+------20251015102440_image1/
+-----------image1_x1y1_x2y2.png
+----------- .....
+
+
+DB structure
+REPORTS
+id, timestamp, bucket_img_path, bucket_detection_path, area_of_interest (geometry)
+
+REPORTS_DETECTIONS
+report_id, detection_id, timestamp, ruleset_id, author_id
+
+DETECTIONS
+detection id, class, x1, y1, x2, y2, x3, y3, x4, y4 confidence, latitude, longitude
+
+RULESET
+id, name, rules
+
+USERS
+
+NOTIFICATIONS
+id, status, ruleset_id, priority, center_coords, summary(static atm), detection_id
+
+
+
+Endpoints:
+
+/upload-image # upload geotiff image in data/
+
+/list-images # returns id list images from the Bucket (data/)
+
+/detect(image_name, report_name, model_id, confidence, author, rules) # includes rules, -> generates report
+
+/reports # get reports
+
+/reports/compare(report_id1, report_id2) # returns comparison/pdf
+
+/notifications # Server-Sent Events (SSE) # event: report_id: 3, content: "3 planes discovered"
+
+
+/ruleset #POST, GET, DELETE
+
+/classes # All potential objects with object id
+
+/models # Detection models (model_id, model_name)
