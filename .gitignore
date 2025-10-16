@@ -18,3 +18,5 @@ app/tests/test_routes.py
 app/tests/test_services.py
 app/tests/test_models.py
 app/tests/test_utils.py
+
+.env
