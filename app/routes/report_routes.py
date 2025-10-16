@@ -258,28 +258,3 @@ async def update_report_status(
             status_code=400,
             detail=f"Error updating report status: {str(e)}"
         )
-
-
-@router.get("/models")
-async def get_available_models(db=Depends(get_database)):
-    """
-    Get list of available ML models.
-    
-    Args:
-        db: Database dependency
-        
-    Returns:
-        List of available models with their metadata
-        
-    Raises:
-        HTTPException: If there's an error retrieving models
-    """
-    try:
-        validation_service = ValidationService(db)
-        models = validation_service.get_available_models()
-        return {"models": models, "total": len(models)}
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error retrieving available models: {str(e)}"
-        )

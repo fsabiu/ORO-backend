@@ -14,12 +14,12 @@ from ..database import Database
 class ValidationService:
     """Service class for validation operations."""
     
-    def __init__(self, db: Database):
+    def __init__(self, db: Database = None):
         """
         Initialize the validation service.
         
         Args:
-            db: Database connection instance
+            db: Database connection instance (optional for model operations)
         """
         self.db = db
     
@@ -195,10 +195,16 @@ class ValidationService:
     
     def get_available_models(self) -> List[Dict[str, Any]]:
         """
-        Get list of available ML models from the models directory.
+        Get list of available ML models from the models directory with full metadata.
         
         Returns:
-            List of available models with their metadata
+            List of available models with their complete metadata including:
+            - id: Model ID
+            - name: Model name
+            - classes: List of detectable classes
+            - folder: Folder name in models directory
+            - has_checkpoint: Whether checkpoint file exists
+            - checkpoint_size_mb: Size of checkpoint file in MB
         """
         try:
             models = []
@@ -207,25 +213,36 @@ class ValidationService:
             if not os.path.exists(models_dir):
                 return models
             
-            for model_folder in os.listdir(models_dir):
+            for model_folder in sorted(os.listdir(models_dir)):
                 model_path = os.path.join(models_dir, model_folder)
                 if os.path.isdir(model_path):
                     metadata_file = os.path.join(model_path, 'metadata.json')
-                    model_file = os.path.join(model_path, 'file.pt')
+                    checkpoint_file = os.path.join(model_path, 'file.pt')
                     
-                    if os.path.exists(metadata_file) and os.path.exists(model_file):
+                    if os.path.exists(metadata_file):
                         try:
                             with open(metadata_file, 'r') as f:
                                 metadata = json.load(f)
-                                models.append({
-                                    'id': metadata.get('id'),
-                                    'name': metadata.get('name'),
-                                    'folder': model_folder,
-                                    'available': True
-                                })
-                        except (json.JSONDecodeError, KeyError):
+                                
+                                # Add additional info
+                                metadata['folder'] = model_folder
+                                metadata['has_checkpoint'] = os.path.exists(checkpoint_file)
+                                
+                                if os.path.exists(checkpoint_file):
+                                    metadata['checkpoint_size_mb'] = round(
+                                        os.path.getsize(checkpoint_file) / 1024 / 1024, 2
+                                    )
+                                else:
+                                    metadata['checkpoint_size_mb'] = 0
+                                
+                                models.append(metadata)
+                        except (json.JSONDecodeError, IOError) as e:
+                            # Log error but continue with other models
+                            print(f"Error reading {metadata_file}: {e}")
                             continue
             
+            # Sort by ID
+            models.sort(key=lambda x: x.get('id', 0))
             return models
             
         except Exception as e:
