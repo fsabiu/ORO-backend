@@ -15,6 +15,7 @@ from ..models import (
     ReportUpdate, 
     ReportResponse, 
     ReportListResponse,
+    ReportCreationResponse,
     ErrorResponse,
     SuccessResponse
 )
@@ -99,37 +100,8 @@ async def get_report(
         )
 
 
-@router.post("/", response_model=ReportResponse, status_code=201)
+@router.post("/", response_model=ReportCreationResponse, status_code=202)
 async def create_report(
-    report_data: ReportCreate,
-    db=Depends(get_database)
-):
-    """
-    Create a new report (legacy endpoint).
-    
-    Args:
-        report_data: Report creation data
-        db: Database dependency
-        
-    Returns:
-        Created report details
-        
-    Raises:
-        HTTPException: If creation fails
-    """
-    try:
-        service = ReportService(db)
-        report = service.create_report(report_data)
-        return report
-    except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error creating report: {str(e)}"
-        )
-
-
-@router.post("/process", status_code=202)
-async def create_report_with_processing(
     report_data: ReportCreate,
     db=Depends(get_database)
 ):

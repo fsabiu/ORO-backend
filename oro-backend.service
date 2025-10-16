@@ -1,0 +1,27 @@
+[Unit]
+Description=ORO Backend FastAPI Application
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/ORO-backend
+Environment=PATH=/home/ubuntu/miniforge/envs/ORO/bin:/home/ubuntu/miniforge/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/ubuntu/miniforge/envs/ORO/bin/python /home/ubuntu/ORO-backend/run_server.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=oro-backend
+
+# Environment variables (uncomment and modify as needed)
+# Environment=HOST=0.0.0.0
+# Environment=PORT=8000
+# Environment=RELOAD=false
+# Environment=LOG_LEVEL=info
+
+[Install]
+WantedBy=multi-user.target

@@ -344,34 +344,19 @@ class ReportListResponse(BaseModel):
     total: int = Field(..., description="Total number of reports")
     page: int = Field(..., description="Current page number")
     per_page: int = Field(..., description="Number of items per page")
+
+
+class ReportCreationResponse(BaseModel):
+    """Model for report creation response (202 Accepted)."""
+    report_id: int = Field(..., description="ID of the created report")
+    status: str = Field(..., description="Processing status")
+    message: str = Field(..., description="Status message")
     
     class Config:
         json_schema_extra = {
             "example": {
-                "reports": [
-                    {
-                        "id": 1,
-                        "name": "Urban Analysis - Downtown District",
-                        "status": "completed",
-                        "timestamp": "2024-01-15T10:30:00Z",
-                        "bucket_img_path": "images/urban_analysis_2024_01_15.tif",
-                        "area_of_interest": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-74.0059, 40.7128],
-                                [-73.9352, 40.7128],
-                                [-73.9352, 40.7589],
-                                [-74.0059, 40.7589],
-                                [-74.0059, 40.7128]
-                            ]]
-                        },
-                        "author": "analyst@company.com",
-                        "created_at": "2024-01-15T10:30:00Z",
-                        "updated_at": "2024-01-15T10:30:00Z"
-                    }
-                ],
-                "total": 1,
-                "page": 1,
-                "per_page": 10
+                "report_id": 123,
+                "status": "accepted",
+                "message": "Report creation initiated. Processing will begin shortly."
             }
         }
