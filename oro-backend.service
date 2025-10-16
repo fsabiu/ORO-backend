@@ -8,8 +8,8 @@ Type=simple
 User=ubuntu
 Group=ubuntu
 WorkingDirectory=/home/ubuntu/ORO-backend
-Environment=PATH=/home/ubuntu/miniforge/envs/ORO/bin:/home/ubuntu/miniforge/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/home/ubuntu/miniforge/envs/ORO/bin/python /home/ubuntu/ORO-backend/run_server.py
+Environment=PATH=/home/ubuntu/miniforge/envs/ORO-ml/bin:/home/ubuntu/miniforge/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/ubuntu/miniforge/envs/ORO-ml/bin/python /home/ubuntu/ORO-backend/run_server.py
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=10

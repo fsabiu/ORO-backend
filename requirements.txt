@@ -1,18 +1,54 @@
-# Oracle Database Dependencies
-oracledb>=1.4.0
+# ==============================================================================
+# PyTorch with CUDA 11.3
+# The following index is required for pip to find the correct pre-compiled
+# PyTorch wheels that are linked against a specific CUDA version.
+# ==============================================================================
+--extra-index-url https://download.pytorch.org/whl/cu113
+torch==1.10.1+cu113
+torchvision==0.11.2+cu113
+torchaudio==0.10.1+cu113
 
-# Environment Variables
-python-dotenv>=1.0.0
+# ==============================================================================
+# Ultralytics and MMLab TOOL (openmim)
+#
+# IMPORTANT: mmcv-full, mmdet, and mmrotate are NOT listed here.
+# They MUST be installed using the 'mim' command AFTER this file is installed.
+# ==============================================================================
+ultralytics==8.3.215
+openmim==0.3.9 # The tool to install other MMLab packages
 
-# FastAPI and Web Server
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-pydantic>=2.5.0
+# ==============================================================================
+# Core Scientific and Image Processing Libraries
+# ==============================================================================
+numpy==1.24.4
+opencv-python==4.12.0.88
+matplotlib==3.7.5
+pillow==10.4.0
+pandas==2.0.3
+scipy==1.10.1
+shapely==2.0.7
+pycocotools==2.0.7
 
+# ==============================================================================
+# Application Dependencies (Web Server and Database)
+# ==============================================================================
+fastapi==0.119.0
+uvicorn==0.33.0
+pydantic==2.10.6
+oracledb==3.0.0
+python-dotenv==1.0.1
+
+# ==============================================================================
 # Testing Dependencies
-pytest>=7.0.0
-pytest-cov>=4.0.0
-httpx>=0.25.0
+# ==============================================================================
+pytest==8.3.5
+pytest-cov==5.0.0
+httpx==0.28.1
 
-# Logging and Utilities
-colorlog>=6.7.0
+# ==============================================================================
+# General Utilities
+# ==============================================================================
+colorlog==6.9.0
+PyYAML==6.0.3
+tqdm==4.65.2
+requests==2.28.2

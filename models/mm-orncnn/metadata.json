@@ -1,4 +1,15 @@
 {
     "id": 1,
-    "name": "MM ORN-CNN"
+    "name": "MM ORN-CNN",
+    "classes": [
+        "person",
+        "car",
+        "truck",
+        "bus",
+        "motorcycle",
+        "bicycle",
+        "train",
+        "plane",
+        "ship"
+    ]
 }
