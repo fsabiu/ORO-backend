@@ -1,0 +1,221 @@
+# Model Configuration File
+# This file defines all available models for download and setup
+# 
+# Each model entry requires:
+#   - name: Display name of the model
+#   - folder_name: Directory name in the models folder
+#   - checkpoint_url: URL to download the model checkpoint
+#   - classes: List of detectable classes
+
+# COCO Dataset Classes (80 classes)
+coco_classes: &coco_classes
+  - person
+  - bicycle
+  - car
+  - motorcycle
+  - airplane
+  - bus
+  - train
+  - truck
+  - boat
+  - traffic light
+  - fire hydrant
+  - stop sign
+  - parking meter
+  - bench
+  - bird
+  - cat
+  - dog
+  - horse
+  - sheep
+  - cow
+  - elephant
+  - bear
+  - zebra
+  - giraffe
+  - backpack
+  - umbrella
+  - handbag
+  - tie
+  - suitcase
+  - frisbee
+  - skis
+  - snowboard
+  - sports ball
+  - kite
+  - baseball bat
+  - baseball glove
+  - skateboard
+  - surfboard
+  - tennis racket
+  - bottle
+  - wine glass
+  - cup
+  - fork
+  - knife
+  - spoon
+  - bowl
+  - banana
+  - apple
+  - sandwich
+  - orange
+  - broccoli
+  - carrot
+  - hot dog
+  - pizza
+  - donut
+  - cake
+  - chair
+  - couch
+  - potted plant
+  - bed
+  - dining table
+  - toilet
+  - tv
+  - laptop
+  - mouse
+  - remote
+  - keyboard
+  - cell phone
+  - microwave
+  - oven
+  - toaster
+  - sink
+  - refrigerator
+  - book
+  - clock
+  - vase
+  - scissors
+  - teddy bear
+  - hair drier
+  - toothbrush
+
+# DOTA Dataset Classes (15 classes) - for oriented object detection
+dota_classes: &dota_classes
+  - plane
+  - baseball-diamond
+  - bridge
+  - ground-track-field
+  - small-vehicle
+  - large-vehicle
+  - ship
+  - tennis-court
+  - basketball-court
+  - storage-tank
+  - soccer-ball-field
+  - roundabout
+  - harbor
+  - swimming-pool
+  - helicopter
+
+# Model Definitions
+models:
+  # MMRotate Models
+  - name: Oriented R-CNN ResNet50
+    folder_name: mm-oriented-rcnn-r50
+    checkpoint_url: https://download.openmmlab.com/mmrotate/v0.1.0/oriented_rcnn/oriented_rcnn_r50_fpn_1x_dota_le90/oriented_rcnn_r50_fpn_1x_dota_le90-6d2b2ce0.pth
+    classes: *dota_classes
+    
+  - name: Rotated RetinaNet ResNet50
+    folder_name: mm-rotated-retinanet-r50
+    checkpoint_url: https://download.openmmlab.com/mmrotate/v0.1.0/rotated_retinanet/rotated_retinanet_obb_r50_fpn_1x_dota_le90/rotated_retinanet_obb_r50_fpn_1x_dota_le90-c0097bc4.pth
+    classes: *dota_classes
+    
+  - name: RoI Transformer ResNet50
+    folder_name: mm-roi-transformer-r50
+    checkpoint_url: https://download.openmmlab.com/mmrotate/v0.1.0/roi_trans/roi_trans_r50_fpn_1x_dota_le90/roi_trans_r50_fpn_1x_dota_le90-d1f0b77a.pth
+    classes: *dota_classes
+    
+  - name: S2A-Net ResNet50
+    folder_name: mm-s2anet-r50
+    checkpoint_url: https://download.openmmlab.com/mmrotate/v0.1.0/rotated_retinanet/rotated_retinanet_obb_r50_fpn_1x_dota_le135/rotated_retinanet_obb_r50_fpn_1x_dota_le135-e4131166.pth
+    classes: *dota_classes
+    
+  - name: Gliding Vertex ResNet50
+    folder_name: mm-gliding-vertex-r50
+    checkpoint_url: https://download.openmmlab.com/mmrotate/v0.1.0/rotated_faster_rcnn/rotated_faster_rcnn_r50_fpn_1x_dota_le90/rotated_faster_rcnn_r50_fpn_1x_dota_le90-0393aa5c.pth
+    classes: *dota_classes
+    
+  - name: Rotated FCOS ResNet50
+    folder_name: mm-rotated-fcos-r50
+    checkpoint_url: https://download.openmmlab.com/mmrotate/v0.1.0/rotated_fcos/rotated_fcos_sep_angle_r50_fpn_1x_dota_le90/rotated_fcos_sep_angle_r50_fpn_1x_dota_le90-0be71a0c.pth
+    classes: *dota_classes
+
+  # YOLO v8 Models - COCO Dataset
+  - name: YOLOv8n-COCO
+    folder_name: yolov8n-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.pt
+    classes: *coco_classes
+    
+  - name: YOLOv8s-COCO
+    folder_name: yolov8s-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s.pt
+    classes: *coco_classes
+    
+  - name: YOLOv8m-COCO
+    folder_name: yolov8m-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8m.pt
+    classes: *coco_classes
+    
+  - name: YOLOv8l-COCO
+    folder_name: yolov8l-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8l.pt
+    classes: *coco_classes
+    
+  - name: YOLOv8x-COCO
+    folder_name: yolov8x-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8x.pt
+    classes: *coco_classes
+
+  # YOLO v11 Models - COCO Dataset
+  - name: YOLOv11n-COCO
+    folder_name: yolov11n-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt
+    classes: *coco_classes
+    
+  - name: YOLOv11s-COCO
+    folder_name: yolov11s-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt
+    classes: *coco_classes
+    
+  - name: YOLOv11m-COCO
+    folder_name: yolov11m-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m.pt
+    classes: *coco_classes
+    
+  - name: YOLOv11l-COCO
+    folder_name: yolov11l-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11l.pt
+    classes: *coco_classes
+    
+  - name: YOLOv11x-COCO
+    folder_name: yolov11x-coco
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11x.pt
+    classes: *coco_classes
+
+  # YOLO v11 OBB Models - DOTA Dataset  
+  - name: YOLOv11n-OBB-DOTA
+    folder_name: yolov11n-obb-dota
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-obb.pt
+    classes: *dota_classes
+    
+  - name: YOLOv11s-OBB-DOTA
+    folder_name: yolov11s-obb-dota
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s-obb.pt
+    classes: *dota_classes
+    
+  - name: YOLOv11m-OBB-DOTA
+    folder_name: yolov11m-obb-dota
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m-obb.pt
+    classes: *dota_classes
+    
+  - name: YOLOv11l-OBB-DOTA
+    folder_name: yolov11l-obb-dota
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11l-obb.pt
+    classes: *dota_classes
+    
+  - name: YOLOv11x-OBB-DOTA
+    folder_name: yolov11x-obb-dota
+    checkpoint_url: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11x-obb.pt
+    classes: *dota_classes
+

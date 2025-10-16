@@ -1,6 +1,6 @@
 db/wallet_oro.zip
 .conda
-models
+models/*/*.pt
 
 *.pyc
 
