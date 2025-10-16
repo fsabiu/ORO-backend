@@ -246,16 +246,29 @@ class SuccessResponse(BaseModel):
 
 class ReportCreate(BaseModel):
     """Model for creating a new report."""
-    name: str = Field(..., min_length=1, max_length=255, description="Report name")
-    bucket_img_path: str = Field(..., min_length=1, max_length=512, description="Path to the image in the bucket")
+    image_name: str = Field(..., min_length=1, max_length=255, description="Filename of the GeoTIFF in object storage")
+    report_name: str = Field(..., min_length=1, max_length=255, description="User-friendly name for the analysis report")
+    model_id: str = Field(..., min_length=1, max_length=255, description="Identifier for the ML model to be used")
+    confidence_threshold: float = Field(..., ge=0.0, le=1.0, description="Minimum confidence score for detections (0.0 to 1.0)")
+    author_id: str = Field(..., min_length=1, max_length=255, description="ID of the user initiating the request")
+    ruleset_ids: List[int] = Field(..., description="Array of ruleset IDs to check against")
     area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
-    author: str = Field(..., min_length=1, max_length=255, description="Author name")
+    
+    @validator('ruleset_ids')
+    def validate_ruleset_ids(cls, v):
+        if not v:
+            raise ValueError('At least one ruleset ID must be provided')
+        return v
     
     class Config:
         json_schema_extra = {
             "example": {
-                "name": "Urban Analysis - Downtown District",
-                "bucket_img_path": "images/urban_analysis_2024_01_15.tif",
+                "image_name": "urban_analysis_2024_01_15.tif",
+                "report_name": "Urban Analysis - Downtown District",
+                "model_id": "yolo_v8_urban_detection",
+                "confidence_threshold": 0.7,
+                "author_id": "user_123",
+                "ruleset_ids": [1, 2, 3],
                 "area_of_interest": {
                     "type": "Polygon",
                     "coordinates": [[
@@ -265,8 +278,7 @@ class ReportCreate(BaseModel):
                         [-74.0059, 40.7589],
                         [-74.0059, 40.7128]
                     ]]
-                },
-                "author": "analyst@company.com"
+                }
             }
         }
 

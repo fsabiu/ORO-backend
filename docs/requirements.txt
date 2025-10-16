@@ -17,7 +17,7 @@ Endpoints:
 
 /list-images # returns id list images from the Bucket (data/)
 
-/detect(image_name, report_name, model_id, confidence, author, rules) # includes rules, -> generates report
+CREATE REPORT: /report(image_name, report_name, model_id, confidence, author, rules, area_of_interest) # includes rules, -> generates report
 
 /reports # get reports
 

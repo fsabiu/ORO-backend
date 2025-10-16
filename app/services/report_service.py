@@ -11,6 +11,7 @@ from datetime import datetime
 
 from ..database import Database
 from ..models import ReportCreate, ReportUpdate, ReportResponse, GeometryBase
+from .validation_service import ValidationService
 
 
 class ReportService:
@@ -261,6 +262,156 @@ class ReportService:
         affected_rows = self.db.execute_update(query, {'report_id': report_id})
         
         return affected_rows > 0
+    
+    def create_report_with_processing(self, report_data: ReportCreate) -> Dict[str, Any]:
+        """
+        Create a new report and trigger background processing.
+        
+        This method implements the CREATE REPORT specification:
+        - Validates all required fields and dependencies
+        - Creates the initial report record
+        - Triggers background processing task
+        - Returns 202 Accepted response
+        
+        Args:
+            report_data: Report creation data with new specifications
+            
+        Returns:
+            Dictionary containing report_id and status
+            
+        Raises:
+            Exception: If validation fails or creation fails
+        """
+        # Initialize validation service
+        validation_service = ValidationService(self.db)
+        
+        # Step 1: Validation
+        self._validate_report_creation(report_data, validation_service)
+        
+        # Step 2: Create report record
+        report_id = self._create_report_record(report_data)
+        
+        # Step 3: Trigger background processing
+        self._trigger_background_processing(report_id, report_data)
+        
+        return {
+            "report_id": report_id,
+            "status": "accepted",
+            "message": "Report creation initiated. Processing will begin shortly."
+        }
+    
+    def _validate_report_creation(self, report_data: ReportCreate, validation_service: ValidationService):
+        """
+        Validate all requirements for report creation.
+        
+        Args:
+            report_data: Report creation data
+            validation_service: Validation service instance
+            
+        Raises:
+            Exception: If any validation fails
+        """
+        # Validate image exists in object storage
+        if not validation_service.validate_image_exists(report_data.image_name):
+            raise Exception(f"Image '{report_data.image_name}' not found in object storage")
+        
+        # Validate all rulesets exist
+        ruleset_validation = validation_service.validate_rulesets_exist(report_data.ruleset_ids)
+        if not ruleset_validation["valid"]:
+            missing = ruleset_validation["missing_rulesets"]
+            raise Exception(f"Rulesets not found: {missing}")
+        
+        # Validate model exists
+        if not validation_service.validate_model_exists(report_data.model_id):
+            raise Exception(f"Model '{report_data.model_id}' not found or not available")
+        
+        # Validate author exists
+        if not validation_service.validate_author_exists(report_data.author_id):
+            raise Exception(f"Author '{report_data.author_id}' not found")
+        
+        # Validate area of interest if provided
+        if report_data.area_of_interest:
+            if not validation_service.validate_geometry(report_data.area_of_interest.dict()):
+                raise Exception("Invalid area of interest geometry")
+    
+    def _create_report_record(self, report_data: ReportCreate) -> int:
+        """
+        Create the initial report record in the database.
+        
+        Args:
+            report_data: Report creation data
+            
+        Returns:
+            ID of the created report
+        """
+        # Convert geometry to Oracle SDO_GEOMETRY format if provided
+        sdo_geometry = None
+        if report_data.area_of_interest:
+            sdo_geometry = self._geometry_to_sdo(report_data.area_of_interest)
+        
+        # Insert the report with initial status
+        query = """
+            INSERT INTO REPORTS (name, status, bucket_img_path, area_of_interest, author)
+            VALUES (:name, 'pending', :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
+            RETURNING id INTO :report_id
+        """
+        
+        params = {
+            'name': report_data.report_name,
+            'bucket_img_path': report_data.image_name,
+            'sdo_geometry': sdo_geometry,
+            'author': report_data.author_id,
+            'report_id': None
+        }
+        
+        # Execute the insert
+        cursor = self.db.connection.cursor()
+        cursor.execute(query, params)
+        report_id = cursor.fetchone()[0]
+        cursor.close()
+        
+        return report_id
+    
+    def _trigger_background_processing(self, report_id: int, report_data: ReportCreate):
+        """
+        Trigger the background processing task.
+        
+        Args:
+            report_id: ID of the created report
+            report_data: Original report creation data
+            
+        TODO: Implement actual background task triggering
+        - Use Celery or similar task queue
+        - Pass all necessary parameters
+        - Handle task queuing errors
+        """
+        # TODO: Implement background task triggering
+        # This is a placeholder implementation
+        # In production, you would:
+        # 1. Import the Celery task
+        # 2. Queue the task with all parameters
+        # 3. Handle any queuing errors
+        # 4. Log the task submission
+        
+        # from ..tasks.report_processing import process_report_task
+        # 
+        # try:
+        #     task = process_report_task.delay(
+        #         report_id=report_id,
+        #         model_id=report_data.model_id,
+        #         confidence_threshold=report_data.confidence_threshold,
+        #         ruleset_ids=report_data.ruleset_ids,
+        #         area_of_interest=report_data.area_of_interest.dict() if report_data.area_of_interest else None
+        #     )
+        #     logger.info(f"Background task queued for report_id: {report_id}, task_id: {task.id}")
+        # except Exception as e:
+        #     logger.error(f"Failed to queue background task for report_id: {report_id}, error: {str(e)}")
+        #     raise Exception(f"Failed to start background processing: {str(e)}")
+        
+        # For now, just log the action
+        print(f"TODO: Trigger background processing for report_id: {report_id}")
+        print(f"Parameters: model_id={report_data.model_id}, confidence={report_data.confidence_threshold}")
+        print(f"Rulesets: {report_data.ruleset_ids}")
     
     def _geometry_to_sdo(self, geometry: GeometryBase) -> str:
         """

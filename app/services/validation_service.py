@@ -1,0 +1,233 @@
+"""
+Validation service for report creation and other operations.
+
+This module contains validation functions for various operations
+including image existence, ruleset validation, and other checks.
+"""
+
+import os
+import json
+from typing import List, Dict, Any
+from ..database import Database
+
+
+class ValidationService:
+    """Service class for validation operations."""
+    
+    def __init__(self, db: Database):
+        """
+        Initialize the validation service.
+        
+        Args:
+            db: Database connection instance
+        """
+        self.db = db
+    
+    def validate_image_exists(self, image_name: str) -> bool:
+        """
+        Validate that the image exists in the object storage bucket.
+        
+        Args:
+            image_name: Name of the image file
+            
+        Returns:
+            True if image exists, False otherwise
+            
+        TODO: Implement actual object storage check
+        - Connect to object storage (S3, MinIO, etc.)
+        - Check if the file exists in the bucket
+        - Verify file is a valid GeoTIFF
+        - Return appropriate boolean result
+        """
+        # TODO: Implement object storage validation
+        # This is a placeholder implementation
+        # In production, you would:
+        # 1. Connect to your object storage service (S3, MinIO, etc.)
+        # 2. Check if the file exists
+        # 3. Verify it's a valid GeoTIFF file
+        # 4. Return True/False accordingly
+        
+        # For now, assume all images exist
+        return True
+    
+    def validate_rulesets_exist(self, ruleset_ids: List[int]) -> Dict[str, Any]:
+        """
+        Validate that all ruleset IDs exist in the database.
+        
+        Args:
+            ruleset_ids: List of ruleset IDs to validate
+            
+        Returns:
+            Dictionary with validation results and existing rulesets
+        """
+        if not ruleset_ids:
+            return {
+                "valid": False,
+                "existing_rulesets": [],
+                "missing_rulesets": [],
+                "ruleset_details": {},
+                "error": "No ruleset IDs provided"
+            }
+        
+        # Create placeholders for the IN clause
+        placeholders = ','.join([f':id_{i}' for i in range(len(ruleset_ids))])
+        query = f"""
+            SELECT id, name, description, author, created_at
+            FROM RULESETS
+            WHERE id IN ({placeholders})
+        """
+        
+        # Create parameters dictionary
+        params = {f'id_{i}': ruleset_id for i, ruleset_id in enumerate(ruleset_ids)}
+        
+        try:
+            results = self.db.execute_query(query, params)
+            existing_ids = [row['ID'] for row in results]
+            missing_ids = [rid for rid in ruleset_ids if rid not in existing_ids]
+            
+            # Create ruleset details dictionary
+            ruleset_details = {
+                row['ID']: {
+                    'id': row['ID'],
+                    'name': row['NAME'],
+                    'description': row['DESCRIPTION'],
+                    'author': row['AUTHOR'],
+                    'created_at': row['CREATED_AT']
+                }
+                for row in results
+            }
+            
+            return {
+                "valid": len(missing_ids) == 0,
+                "existing_rulesets": existing_ids,
+                "missing_rulesets": missing_ids,
+                "ruleset_details": ruleset_details
+            }
+            
+        except Exception as e:
+            return {
+                "valid": False,
+                "existing_rulesets": [],
+                "missing_rulesets": ruleset_ids,
+                "ruleset_details": {},
+                "error": f"Database error: {str(e)}"
+            }
+    
+    def validate_model_exists(self, model_id: str) -> bool:
+        """
+        Validate that the ML model exists and is available.
+        
+        Args:
+            model_id: Identifier for the ML model
+            
+        Returns:
+            True if model exists and is available, False otherwise
+        """
+        try:
+            # Get the models directory path
+            models_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'models')
+            
+            if not os.path.exists(models_dir):
+                return False
+            
+            # Check each model subdirectory for metadata.json
+            for model_folder in os.listdir(models_dir):
+                model_path = os.path.join(models_dir, model_folder)
+                if os.path.isdir(model_path):
+                    metadata_file = os.path.join(model_path, 'metadata.json')
+                    if os.path.exists(metadata_file):
+                        try:
+                            with open(metadata_file, 'r') as f:
+                                metadata = json.load(f)
+                                # Check if the model_id matches either the 'id' or 'name' field
+                                if (str(metadata.get('id')) == str(model_id) or 
+                                    metadata.get('name', '').lower() == model_id.lower()):
+                                    # Also check if the model file exists
+                                    model_file = os.path.join(model_path, 'file.pt')
+                                    return os.path.exists(model_file)
+                        except (json.JSONDecodeError, KeyError):
+                            continue
+            
+            return False
+            
+        except Exception as e:
+            # Log the error but don't raise it
+            print(f"Error validating model {model_id}: {str(e)}")
+            return False
+    
+    def validate_author_exists(self, author_id: str) -> bool:
+        """
+        Validate that the author exists in the system.
+        
+        Args:
+            author_id: ID of the user/author
+            
+        Returns:
+            True if author exists, False otherwise
+        """
+        return True
+    
+    def validate_geometry(self, area_of_interest: Dict[str, Any]) -> bool:
+        """
+        Validate that the area of interest geometry is valid.
+        
+        Args:
+            area_of_interest: Geometry object to validate
+            
+        Returns:
+            True if geometry is valid, False otherwise
+            
+        TODO: Implement geometry validation
+        - Validate GeoJSON structure
+        - Check coordinate validity
+        - Verify geometry is within reasonable bounds
+        """
+        # TODO: Implement geometry validation
+        # This is a placeholder implementation
+        # In production, you would:
+        # 1. Validate GeoJSON structure
+        # 2. Check coordinate validity and bounds
+        # 3. Verify geometry is well-formed
+        # 4. Return appropriate boolean result
+        
+        # For now, assume all geometries are valid
+        return True
+    
+    def get_available_models(self) -> List[Dict[str, Any]]:
+        """
+        Get list of available ML models from the models directory.
+        
+        Returns:
+            List of available models with their metadata
+        """
+        try:
+            models = []
+            models_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'models')
+            
+            if not os.path.exists(models_dir):
+                return models
+            
+            for model_folder in os.listdir(models_dir):
+                model_path = os.path.join(models_dir, model_folder)
+                if os.path.isdir(model_path):
+                    metadata_file = os.path.join(model_path, 'metadata.json')
+                    model_file = os.path.join(model_path, 'file.pt')
+                    
+                    if os.path.exists(metadata_file) and os.path.exists(model_file):
+                        try:
+                            with open(metadata_file, 'r') as f:
+                                metadata = json.load(f)
+                                models.append({
+                                    'id': metadata.get('id'),
+                                    'name': metadata.get('name'),
+                                    'folder': model_folder,
+                                    'available': True
+                                })
+                        except (json.JSONDecodeError, KeyError):
+                            continue
+            
+            return models
+            
+        except Exception as e:
+            print(f"Error getting available models: {str(e)}")
+            return []

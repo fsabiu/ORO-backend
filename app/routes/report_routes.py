@@ -19,6 +19,7 @@ from ..models import (
     SuccessResponse
 )
 from ..services.report_service import ReportService
+from ..services.validation_service import ValidationService
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -104,7 +105,7 @@ async def create_report(
     db=Depends(get_database)
 ):
     """
-    Create a new report.
+    Create a new report (legacy endpoint).
     
     Args:
         report_data: Report creation data
@@ -123,6 +124,49 @@ async def create_report(
     except Exception as e:
         raise HTTPException(
             status_code=400,
+            detail=f"Error creating report: {str(e)}"
+        )
+
+
+@router.post("/process", status_code=202)
+async def create_report_with_processing(
+    report_data: ReportCreate,
+    db=Depends(get_database)
+):
+    """
+    Create a new report and trigger background processing.
+    
+    This endpoint implements the CREATE REPORT specification:
+    - Validates all required fields and dependencies
+    - Creates the initial report record with 'pending' status
+    - Triggers asynchronous background processing
+    - Returns 202 Accepted with report_id for tracking
+    
+    Args:
+        report_data: Report creation data with processing parameters
+        db: Database dependency
+        
+    Returns:
+        Dictionary with report_id and status information
+        
+    Raises:
+        HTTPException: If validation fails or creation fails
+    """
+    try:
+        service = ReportService(db)
+        result = service.create_report_with_processing(report_data)
+        return result
+    except Exception as e:
+        # Determine appropriate status code based on error type
+        if "not found" in str(e).lower():
+            status_code = 404
+        elif "validation" in str(e).lower() or "invalid" in str(e).lower():
+            status_code = 400
+        else:
+            status_code = 500
+            
+        raise HTTPException(
+            status_code=status_code,
             detail=f"Error creating report: {str(e)}"
         )
 
@@ -241,4 +285,29 @@ async def update_report_status(
         raise HTTPException(
             status_code=400,
             detail=f"Error updating report status: {str(e)}"
+        )
+
+
+@router.get("/models")
+async def get_available_models(db=Depends(get_database)):
+    """
+    Get list of available ML models.
+    
+    Args:
+        db: Database dependency
+        
+    Returns:
+        List of available models with their metadata
+        
+    Raises:
+        HTTPException: If there's an error retrieving models
+    """
+    try:
+        validation_service = ValidationService(db)
+        models = validation_service.get_available_models()
+        return {"models": models, "total": len(models)}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving available models: {str(e)}"
         )
