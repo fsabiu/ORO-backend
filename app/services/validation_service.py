@@ -32,23 +32,23 @@ class ValidationService:
             
         Returns:
             True if image exists, False otherwise
-            
-        TODO: Implement actual object storage check
-        - Connect to object storage (S3, MinIO, etc.)
-        - Check if the file exists in the bucket
-        - Verify file is a valid GeoTIFF
-        - Return appropriate boolean result
         """
-        # TODO: Implement object storage validation
-        # This is a placeholder implementation
-        # In production, you would:
-        # 1. Connect to your object storage service (S3, MinIO, etc.)
-        # 2. Check if the file exists
-        # 3. Verify it's a valid GeoTIFF file
-        # 4. Return True/False accordingly
-        
-        # For now, assume all images exist
-        return True
+        try:
+            from .object_storage_service import ObjectStorageService
+            
+            # Initialize object storage service
+            object_storage = ObjectStorageService()
+            
+            # Check if image exists in bucket with data/ prefix
+            object_name = f"data/{image_name}"
+            return object_storage.object_exists(object_name)
+            
+        except Exception as e:
+            # Log the error but don't raise it to avoid breaking the flow
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error validating image existence for '{image_name}': {e}")
+            return False
     
     def validate_rulesets_exist(self, ruleset_ids: List[int]) -> Dict[str, Any]:
         """

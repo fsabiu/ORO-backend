@@ -360,3 +360,94 @@ class ReportCreationResponse(BaseModel):
                 "message": "Report creation initiated. Processing will begin shortly."
             }
         }
+
+
+# =============================================================================
+# IMAGE MODELS
+# =============================================================================
+
+class ImageUploadResponse(BaseModel):
+    """Model for image upload response."""
+    success: bool = Field(..., description="Upload success status")
+    message: str = Field(..., description="Status message")
+    object_name: str = Field(..., description="Object name in bucket")
+    bytes_uploaded: int = Field(..., description="Number of bytes uploaded")
+    content_type: str = Field(..., description="Content type of uploaded file")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "File uploaded successfully",
+                "object_name": "urban_analysis_2024_01_15.tif",
+                "bytes_uploaded": 15728640,
+                "content_type": "image/tiff"
+            }
+        }
+
+
+class ImageInfo(BaseModel):
+    """Model for image information."""
+    name: str = Field(..., description="Object name in bucket")
+    size: int = Field(..., description="File size in bytes")
+    last_modified: Optional[str] = Field(None, description="Last modified timestamp")
+    content_type: Optional[str] = Field(None, description="Content type")
+    etag: Optional[str] = Field(None, description="ETag for the object")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "urban_analysis_2024_01_15.tif",
+                "size": 15728640,
+                "last_modified": "Mon, 15 Jan 2024 10:30:00 GMT",
+                "content_type": "image/tiff",
+                "etag": "\"d41d8cd98f00b204e9800998ecf8427e\""
+            }
+        }
+
+
+class ImageListResponse(BaseModel):
+    """Model for image list response."""
+    success: bool = Field(..., description="Operation success status")
+    prefix: str = Field(..., description="Prefix used for listing (empty for frontend)")
+    count: int = Field(..., description="Number of images found")
+    images: List[ImageInfo] = Field(..., description="List of image information")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "prefix": "",
+                "count": 3,
+                "images": [
+                    {
+                        "name": "urban_analysis_2024_01_15.tif",
+                        "size": 15728640,
+                        "last_modified": "Mon, 15 Jan 2024 10:30:00 GMT",
+                        "content_type": "image/tiff",
+                        "etag": "\"d41d8cd98f00b204e9800998ecf8427e\""
+                    },
+                    {
+                        "name": "port_activity_2024_01_14.tif",
+                        "size": 20971520,
+                        "last_modified": "Sun, 14 Jan 2024 15:45:00 GMT",
+                        "content_type": "image/tiff",
+                        "etag": "\"e41d8cd98f00b204e9800998ecf8427f\""
+                    }
+                ]
+            }
+        }
+
+
+class ImageListRequest(BaseModel):
+    """Model for image list request parameters."""
+    limit: int = Field(default=1000, ge=1, le=10000, description="Maximum number of objects to return")
+    timeout: int = Field(default=30, ge=5, le=300, description="Request timeout in seconds")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "limit": 100,
+                "timeout": 30
+            }
+        }
