@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 import logging
 
 from .routes.ruleset_routes import router as ruleset_router
+from .routes.report_routes import router as report_router
 from .database import Database
 import uvicorn
 
@@ -38,6 +39,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(ruleset_router, prefix="/api/v1")
+app.include_router(report_router, prefix="/api/v1")
 
 
 @app.get("/")

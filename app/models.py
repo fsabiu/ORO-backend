@@ -238,3 +238,128 @@ class SuccessResponse(BaseModel):
                 "data": {"id": 123}
             }
         }
+
+
+# =============================================================================
+# REPORT MODELS
+# =============================================================================
+
+class ReportCreate(BaseModel):
+    """Model for creating a new report."""
+    name: str = Field(..., min_length=1, max_length=255, description="Report name")
+    bucket_img_path: str = Field(..., min_length=1, max_length=512, description="Path to the image in the bucket")
+    area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
+    author: str = Field(..., min_length=1, max_length=255, description="Author name")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "Urban Analysis - Downtown District",
+                "bucket_img_path": "images/urban_analysis_2024_01_15.tif",
+                "area_of_interest": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [-74.0059, 40.7128],
+                        [-73.9352, 40.7128],
+                        [-73.9352, 40.7589],
+                        [-74.0059, 40.7589],
+                        [-74.0059, 40.7128]
+                    ]]
+                },
+                "author": "analyst@company.com"
+            }
+        }
+
+
+class ReportUpdate(BaseModel):
+    """Model for updating an existing report."""
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Report name")
+    status: Optional[str] = Field(None, description="Processing status")
+    bucket_img_path: Optional[str] = Field(None, min_length=1, max_length=512, description="Path to the image in the bucket")
+    area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
+    author: Optional[str] = Field(None, min_length=1, max_length=255, description="Author name")
+    
+    @validator('status')
+    def validate_status(cls, v):
+        if v is not None:
+            allowed_statuses = ['pending', 'processing', 'completed', 'failed']
+            if v not in allowed_statuses:
+                raise ValueError(f'Status must be one of: {", ".join(allowed_statuses)}')
+        return v
+
+
+class ReportResponse(BaseModel):
+    """Model for report API responses."""
+    id: int = Field(..., description="Report ID")
+    name: str = Field(..., description="Report name")
+    status: str = Field(..., description="Processing status")
+    timestamp: Optional[datetime] = Field(None, description="Processing timestamp")
+    bucket_img_path: str = Field(..., description="Path to the image in the bucket")
+    area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
+    author: str = Field(..., description="Author name")
+    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "Urban Analysis - Downtown District",
+                "status": "completed",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "bucket_img_path": "images/urban_analysis_2024_01_15.tif",
+                "area_of_interest": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [-74.0059, 40.7128],
+                        [-73.9352, 40.7128],
+                        [-73.9352, 40.7589],
+                        [-74.0059, 40.7589],
+                        [-74.0059, 40.7128]
+                    ]]
+                },
+                "author": "analyst@company.com",
+                "created_at": "2024-01-15T10:30:00Z",
+                "updated_at": "2024-01-15T10:30:00Z"
+            }
+        }
+
+
+class ReportListResponse(BaseModel):
+    """Model for report list API responses."""
+    reports: List[ReportResponse] = Field(..., description="List of reports")
+    total: int = Field(..., description="Total number of reports")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Number of items per page")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "reports": [
+                    {
+                        "id": 1,
+                        "name": "Urban Analysis - Downtown District",
+                        "status": "completed",
+                        "timestamp": "2024-01-15T10:30:00Z",
+                        "bucket_img_path": "images/urban_analysis_2024_01_15.tif",
+                        "area_of_interest": {
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [-74.0059, 40.7128],
+                                [-73.9352, 40.7128],
+                                [-73.9352, 40.7589],
+                                [-74.0059, 40.7589],
+                                [-74.0059, 40.7128]
+                            ]]
+                        },
+                        "author": "analyst@company.com",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z"
+                    }
+                ],
+                "total": 1,
+                "page": 1,
+                "per_page": 10
+            }
+        }
