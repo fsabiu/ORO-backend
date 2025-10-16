@@ -360,3 +360,14 @@ class Database:
         """Destructor to ensure cleanup."""
         self.disconnect()
         self._cleanup_wallet()
+
+
+# FastAPI dependency function
+def get_database():
+    """
+    FastAPI dependency function to get a database connection.
+    
+    Returns:
+        Database: Database instance for dependency injection
+    """
+    return Database()
