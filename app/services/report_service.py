@@ -48,22 +48,41 @@ class ReportService:
         query = """
             INSERT INTO REPORTS (name, bucket_img_path, area_of_interest, author)
             VALUES (:name, :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
-            RETURNING id INTO :report_id
         """
         
         params = {
             'name': report_data.name,
             'bucket_img_path': report_data.bucket_img_path,
             'sdo_geometry': sdo_geometry,
-            'author': report_data.author,
-            'report_id': None
+            'author': report_data.author
         }
         
         # Execute the insert
         cursor = self.db.connection.cursor()
         cursor.execute(query, params)
-        report_id = cursor.fetchone()[0]
         cursor.close()
+        
+        # Get the generated ID by querying the last inserted record
+        id_query = """
+            SELECT id FROM REPORTS 
+            WHERE name = :name AND author = :author 
+            ORDER BY created_at DESC 
+            FETCH FIRST 1 ROWS ONLY
+        """
+        
+        id_params = {
+            'name': report_data.name,
+            'author': report_data.author
+        }
+        
+        cursor = self.db.connection.cursor()
+        cursor.execute(id_query, id_params)
+        result = cursor.fetchone()
+        report_id = result[0] if result else None
+        cursor.close()
+        
+        if report_id is None:
+            raise Exception("Failed to get generated report ID")
         
         # Return the created report
         return self.get_report(report_id)
@@ -353,22 +372,41 @@ class ReportService:
         query = """
             INSERT INTO REPORTS (name, status, bucket_img_path, area_of_interest, author)
             VALUES (:name, 'pending', :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
-            RETURNING id INTO :report_id
         """
         
         params = {
             'name': report_data.report_name,
             'bucket_img_path': report_data.image_name,
             'sdo_geometry': sdo_geometry,
-            'author': report_data.author_id,
-            'report_id': None
+            'author': report_data.author_id
         }
         
         # Execute the insert
         cursor = self.db.connection.cursor()
         cursor.execute(query, params)
-        report_id = cursor.fetchone()[0]
         cursor.close()
+        
+        # Get the generated ID by querying the last inserted record
+        id_query = """
+            SELECT id FROM REPORTS 
+            WHERE name = :name AND author = :author 
+            ORDER BY created_at DESC 
+            FETCH FIRST 1 ROWS ONLY
+        """
+        
+        id_params = {
+            'name': report_data.report_name,
+            'author': report_data.author_id
+        }
+        
+        cursor = self.db.connection.cursor()
+        cursor.execute(id_query, id_params)
+        result = cursor.fetchone()
+        report_id = result[0] if result else None
+        cursor.close()
+        
+        if report_id is None:
+            raise Exception("Failed to get generated report ID")
         
         return report_id
     

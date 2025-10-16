@@ -39,14 +39,36 @@ class RulesetService:
             Exception: If creation fails
         """
         # Convert JSON fields to strings for Oracle
-        user_groups_json = json.dumps(ruleset_data.user_groups) if ruleset_data.user_groups else None
-        conditions_json = json.dumps([condition.dict() for condition in ruleset_data.conditions]) if ruleset_data.conditions else None
+        # user_groups should be a list of strings
+        if ruleset_data.user_groups:
+            # Ensure it's a list and convert to JSON
+            if isinstance(ruleset_data.user_groups, list):
+                user_groups_json = json.dumps(ruleset_data.user_groups)
+            else:
+                # If it's not a list, wrap it in a list
+                user_groups_json = json.dumps([ruleset_data.user_groups])
+        else:
+            user_groups_json = None
+        
+        # Convert conditions to JSON
+        if ruleset_data.conditions:
+            conditions_data = []
+            for condition in ruleset_data.conditions:
+                if hasattr(condition, 'dict'):
+                    # It's a Condition object - convert to dict and exclude None values
+                    condition_dict = condition.dict(exclude_none=True)
+                    conditions_data.append(condition_dict)
+                else:
+                    # It's already a dictionary
+                    conditions_data.append(condition)
+            conditions_json = json.dumps(conditions_data)
+        else:
+            conditions_json = None
         
         # Insert the ruleset
         query = """
             INSERT INTO RULESETS (name, description, user_groups, conditions, author)
             VALUES (:name, :description, :user_groups, :conditions, :author)
-            RETURNING id INTO :ruleset_id
         """
         
         params = {
@@ -54,15 +76,34 @@ class RulesetService:
             'description': ruleset_data.description,
             'user_groups': user_groups_json,
             'conditions': conditions_json,
-            'author': ruleset_data.author,
-            'ruleset_id': None
+            'author': ruleset_data.author
         }
         
         # Execute the insert
+        self.db.execute_update(query, params)
+        
+        # Get the generated ID by querying the last inserted record
+        # This is a workaround since Oracle's RETURNING clause is tricky with the Python driver
+        id_query = """
+            SELECT id FROM RULESETS 
+            WHERE name = :name AND author = :author 
+            ORDER BY created_at DESC 
+            FETCH FIRST 1 ROWS ONLY
+        """
+        
+        id_params = {
+            'name': ruleset_data.name,
+            'author': ruleset_data.author
+        }
+        
         cursor = self.db.connection.cursor()
-        cursor.execute(query, params)
-        ruleset_id = cursor.fetchone()[0]
+        cursor.execute(id_query, id_params)
+        result = cursor.fetchone()
+        ruleset_id = result[0] if result else None
         cursor.close()
+        
+        if ruleset_id is None:
+            raise Exception("Failed to get generated ruleset ID")
         
         # Return the created ruleset
         return self.get_ruleset(ruleset_id)
@@ -93,9 +134,19 @@ class RulesetService:
         
         ruleset = result[0]
         
-        # Parse JSON fields
-        user_groups = json.loads(ruleset['USER_GROUPS']) if ruleset['USER_GROUPS'] else []
-        conditions_data = json.loads(ruleset['CONDITIONS']) if ruleset['CONDITIONS'] else []
+        # Parse JSON fields - Oracle may return them as already parsed objects or as JSON strings
+        # Handle user_groups - check if it's already a list or needs JSON parsing
+        if isinstance(ruleset['USER_GROUPS'], list):
+            user_groups = ruleset['USER_GROUPS']
+        else:
+            user_groups = json.loads(ruleset['USER_GROUPS']) if ruleset['USER_GROUPS'] else []
+        
+        # Handle conditions - check if it's already a list or needs JSON parsing
+        if isinstance(ruleset['CONDITIONS'], list):
+            conditions_data = ruleset['CONDITIONS']
+        else:
+            conditions_data = json.loads(ruleset['CONDITIONS']) if ruleset['CONDITIONS'] else []
+        
         conditions = [Condition(**condition) for condition in conditions_data]
         
         return RulesetResponse(
@@ -133,7 +184,8 @@ class RulesetService:
         
         # Get total count
         count_query = f"SELECT COUNT(*) as total FROM RULESETS {where_clause}"
-        count_result = self.db.execute_query(count_query, {k: v for k, v in params.items() if k != 'offset' and k != 'per_page'})
+        count_params = {k: v for k, v in params.items() if k != 'offset' and k != 'per_page'}
+        count_result = self.db.execute_query(count_query, count_params)
         total = count_result[0]['TOTAL'] if count_result else 0
         
         # Get rulesets
@@ -149,9 +201,17 @@ class RulesetService:
         
         rulesets = []
         for result in results:
-            # Parse JSON fields
-            user_groups = json.loads(result['USER_GROUPS']) if result['USER_GROUPS'] else []
-            conditions_data = json.loads(result['CONDITIONS']) if result['CONDITIONS'] else []
+            # Parse JSON fields - Oracle may return them as already parsed objects or as JSON strings
+            if isinstance(result['USER_GROUPS'], list):
+                user_groups = result['USER_GROUPS']
+            else:
+                user_groups = json.loads(result['USER_GROUPS']) if result['USER_GROUPS'] else []
+            
+            if isinstance(result['CONDITIONS'], list):
+                conditions_data = result['CONDITIONS']
+            else:
+                conditions_data = json.loads(result['CONDITIONS']) if result['CONDITIONS'] else []
+            
             conditions = [Condition(**condition) for condition in conditions_data]
             
             rulesets.append(RulesetResponse(
@@ -207,7 +267,17 @@ class RulesetService:
             params['user_groups'] = user_groups_json
         
         if ruleset_data.conditions is not None:
-            conditions_json = json.dumps([condition.dict() for condition in ruleset_data.conditions])
+            # Convert conditions to JSON - handle both Condition objects and dictionaries
+            conditions_data = []
+            for condition in ruleset_data.conditions:
+                if hasattr(condition, 'dict'):
+                    # It's a Condition object - convert to dict and exclude None values
+                    condition_dict = condition.dict(exclude_none=True)
+                    conditions_data.append(condition_dict)
+                else:
+                    # It's already a dictionary
+                    conditions_data.append(condition)
+            conditions_json = json.dumps(conditions_data)
             update_fields.append("conditions = :conditions")
             params['conditions'] = conditions_json
         
