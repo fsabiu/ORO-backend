@@ -65,14 +65,4 @@ Ruleset example
         ],
         author: "Wilhelm Matuszewski",
         date: "02/09/2025",
-        area_of_interest: {
-            type: "Polygon",
-            coordinates: [[
-                [-74.0059, 40.7128],
-                [-73.9352, 40.7128],
-                [-73.9352, 40.7589],
-                [-74.0059, 40.7589],
-                [-74.0059, 40.7128]
-            ]]
-        }
 }

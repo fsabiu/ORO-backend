@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from ..database import Database
-from ..models import RulesetCreate, RulesetUpdate, RulesetResponse, GeometryBase, Condition
+from ..models import RulesetCreate, RulesetUpdate, RulesetResponse, Condition
 
 
 class RulesetService:
@@ -38,17 +38,14 @@ class RulesetService:
         Raises:
             Exception: If creation fails
         """
-        # Convert geometry to Oracle SDO_GEOMETRY format
-        sdo_geometry = self._geometry_to_sdo(ruleset_data.area_of_interest)
-        
         # Convert JSON fields to strings for Oracle
         user_groups_json = json.dumps(ruleset_data.user_groups) if ruleset_data.user_groups else None
         conditions_json = json.dumps([condition.dict() for condition in ruleset_data.conditions]) if ruleset_data.conditions else None
         
         # Insert the ruleset
         query = """
-            INSERT INTO RULESETS (name, description, user_groups, conditions, area_of_interest, author)
-            VALUES (:name, :description, :user_groups, :conditions, SDO_GEOMETRY(:sdo_geometry), :author)
+            INSERT INTO RULESETS (name, description, user_groups, conditions, author)
+            VALUES (:name, :description, :user_groups, :conditions, :author)
             RETURNING id INTO :ruleset_id
         """
         
@@ -57,7 +54,6 @@ class RulesetService:
             'description': ruleset_data.description,
             'user_groups': user_groups_json,
             'conditions': conditions_json,
-            'sdo_geometry': sdo_geometry,
             'author': ruleset_data.author,
             'ruleset_id': None
         }
@@ -85,7 +81,7 @@ class RulesetService:
             Exception: If ruleset not found
         """
         query = """
-            SELECT id, name, description, user_groups, conditions, area_of_interest, author, created_at, updated_at
+            SELECT id, name, description, user_groups, conditions, author, created_at, updated_at
             FROM RULESETS
             WHERE id = :ruleset_id
         """
@@ -96,9 +92,6 @@ class RulesetService:
             raise Exception(f"Ruleset with ID {ruleset_id} not found")
         
         ruleset = result[0]
-        
-        # Convert SDO_GEOMETRY to GeoJSON format
-        area_of_interest = self._sdo_to_geometry(ruleset['AREA_OF_INTEREST'])
         
         # Parse JSON fields
         user_groups = json.loads(ruleset['USER_GROUPS']) if ruleset['USER_GROUPS'] else []
@@ -111,7 +104,6 @@ class RulesetService:
             description=ruleset['DESCRIPTION'],
             user_groups=user_groups,
             conditions=conditions,
-            area_of_interest=area_of_interest,
             author=ruleset['AUTHOR'],
             created_at=ruleset['CREATED_AT'],
             updated_at=ruleset['UPDATED_AT']
@@ -146,7 +138,7 @@ class RulesetService:
         
         # Get rulesets
         query = f"""
-            SELECT id, name, description, user_groups, conditions, area_of_interest, author, created_at, updated_at
+            SELECT id, name, description, user_groups, conditions, author, created_at, updated_at
             FROM RULESETS
             {where_clause}
             ORDER BY id
@@ -157,8 +149,6 @@ class RulesetService:
         
         rulesets = []
         for result in results:
-            area_of_interest = self._sdo_to_geometry(result['AREA_OF_INTEREST'])
-            
             # Parse JSON fields
             user_groups = json.loads(result['USER_GROUPS']) if result['USER_GROUPS'] else []
             conditions_data = json.loads(result['CONDITIONS']) if result['CONDITIONS'] else []
@@ -170,7 +160,6 @@ class RulesetService:
                 description=result['DESCRIPTION'],
                 user_groups=user_groups,
                 conditions=conditions,
-                area_of_interest=area_of_interest,
                 author=result['AUTHOR'],
                 created_at=result['CREATED_AT'],
                 updated_at=result['UPDATED_AT']
@@ -222,11 +211,6 @@ class RulesetService:
             update_fields.append("conditions = :conditions")
             params['conditions'] = conditions_json
         
-        if ruleset_data.area_of_interest is not None:
-            sdo_geometry = self._geometry_to_sdo(ruleset_data.area_of_interest)
-            update_fields.append("area_of_interest = SDO_GEOMETRY(:sdo_geometry)")
-            params['sdo_geometry'] = sdo_geometry
-        
         if ruleset_data.author is not None:
             update_fields.append("author = :author")
             params['author'] = ruleset_data.author
@@ -268,55 +252,3 @@ class RulesetService:
         
         return affected_rows > 0
     
-    def _geometry_to_sdo(self, geometry: GeometryBase) -> str:
-        """
-        Convert GeoJSON geometry to Oracle SDO_GEOMETRY format.
-        
-        Args:
-            geometry: GeoJSON geometry
-            
-        Returns:
-            SDO_GEOMETRY string
-        """
-        # This is a simplified conversion - in production, you'd want a more robust solution
-        coords = geometry.coordinates
-        
-        if geometry.type == 'Polygon':
-            # Convert to SDO_GEOMETRY format
-            # For now, we'll store as a simple polygon
-            return f"SDO_GEOMETRY(2003, 4326, NULL, SDO_ELEM_INFO_ARRAY(1, 1003, 1), SDO_ORDINATE_ARRAY({self._coords_to_string(coords[0])}))"
-        else:
-            # For other geometry types, you'd implement similar conversions
-            raise ValueError(f"Unsupported geometry type: {geometry.type}")
-    
-    def _sdo_to_geometry(self, sdo_geometry) -> GeometryBase:
-        """
-        Convert Oracle SDO_GEOMETRY to GeoJSON geometry format.
-        
-        Args:
-            sdo_geometry: Oracle SDO_GEOMETRY object
-            
-        Returns:
-            GeoJSON geometry
-        """
-        # This is a simplified conversion - in production, you'd want a more robust solution
-        # For now, we'll return a basic polygon structure
-        # In a real implementation, you'd parse the SDO_GEOMETRY object
-        
-        # Placeholder - you'd implement proper SDO_GEOMETRY to GeoJSON conversion here
-        return GeometryBase(
-            type="Polygon",
-            coordinates=[[[-74.0059, 40.7128], [-73.9352, 40.7128], [-73.9352, 40.7589], [-74.0059, 40.7589], [-74.0059, 40.7128]]]
-        )
-    
-    def _coords_to_string(self, coords: List[List[float]]) -> str:
-        """
-        Convert coordinate array to string format for SDO_GEOMETRY.
-        
-        Args:
-            coords: List of coordinate pairs
-            
-        Returns:
-            Coordinate string
-        """
-        return ', '.join([f"{coord[0]}, {coord[1]}" for coord in coords])

@@ -54,7 +54,6 @@ class RulesetCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=1024, description="Ruleset description")
     user_groups: List[str] = Field(..., description="List of user group email addresses")
     conditions: List[Condition] = Field(..., description="List of rule conditions")
-    area_of_interest: GeometryBase = Field(..., description="Geographic area of interest")
     author: str = Field(..., min_length=1, max_length=255, description="Author name")
     
     @validator('user_groups')
@@ -99,16 +98,6 @@ class RulesetCreate(BaseModel):
                         "logical_operator": "OR"
                     }
                 ],
-                "area_of_interest": {
-                    "type": "Polygon",
-                    "coordinates": [[
-                        [-74.0059, 40.7128],
-                        [-73.9352, 40.7128],
-                        [-73.9352, 40.7589],
-                        [-74.0059, 40.7589],
-                        [-74.0059, 40.7128]
-                    ]]
-                },
                 "author": "Wilhelm Matuszewski"
             }
         }
@@ -120,7 +109,6 @@ class RulesetUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=1024, description="Ruleset description")
     user_groups: Optional[List[str]] = Field(None, description="List of user group email addresses")
     conditions: Optional[List[Condition]] = Field(None, description="List of rule conditions")
-    area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
     author: Optional[str] = Field(None, min_length=1, max_length=255, description="Author name")
     
     @validator('user_groups')
@@ -147,7 +135,6 @@ class RulesetResponse(BaseModel):
     description: Optional[str] = Field(None, description="Ruleset description")
     user_groups: List[str] = Field(..., description="List of user group email addresses")
     conditions: List[Condition] = Field(..., description="List of rule conditions")
-    area_of_interest: GeometryBase = Field(..., description="Geographic area of interest")
     author: str = Field(..., description="Author name")
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
@@ -181,16 +168,6 @@ class RulesetResponse(BaseModel):
                         "logical_operator": "OR"
                     }
                 ],
-                "area_of_interest": {
-                    "type": "Polygon",
-                    "coordinates": [[
-                        [-74.0059, 40.7128],
-                        [-73.9352, 40.7128],
-                        [-73.9352, 40.7589],
-                        [-74.0059, 40.7589],
-                        [-74.0059, 40.7128]
-                    ]]
-                },
                 "author": "Wilhelm Matuszewski",
                 "created_at": "2024-01-15T10:30:00Z",
                 "updated_at": "2024-01-15T10:30:00Z"
@@ -221,16 +198,6 @@ class RulesetListResponse(BaseModel):
                                 "count": 20
                             }
                         ],
-                        "area_of_interest": {
-                            "type": "Polygon",
-                            "coordinates": [[
-                                [-74.0059, 40.7128],
-                                [-73.9352, 40.7128],
-                                [-73.9352, 40.7589],
-                                [-74.0059, 40.7589],
-                                [-74.0059, 40.7128]
-                            ]]
-                        },
                         "author": "Wilhelm Matuszewski",
                         "created_at": "2024-01-15T10:30:00Z",
                         "updated_at": "2024-01-15T10:30:00Z"
