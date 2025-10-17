@@ -37,7 +37,39 @@ mim install mmrotate==0.3.4
 ```
 
 
-## 2. Verification
+## 2. Setup Model Configurations
+
+MMRotate models require configuration files and base configs to work properly.
+
+### A. Setup Models and Configs:
+
+```bash
+# Download models and automatically setup MMRotate configs
+cd models
+python setup_models.py --filter mm
+
+# This will:
+# - Download MMRotate model checkpoints
+# - Download and copy config files for each model
+# - Copy base config files (_base_/) needed by MMRotate
+```
+
+### B. Manual Setup (if needed):
+
+If you need to manually copy base configs:
+
+```bash
+cd models
+git clone --depth 1 https://github.com/open-mmlab/mmrotate.git /tmp/mmrotate_temp
+cp -r /tmp/mmrotate_temp/configs/_base_ .
+rm -rf /tmp/mmrotate_temp
+```
+
+After setup, your models directory should have:
+- Model folders (e.g., `mm-oriented-rcnn-r50/`) with `file.pt`, `metadata.json`, and `config.py`
+- `_base_/` folder with base config files
+
+## 3. Verification
 
 After completing the installation, run the verification script to ensure both Ultralytics and MMRotate are functioning correctly.
 
@@ -47,15 +79,25 @@ After completing the installation, run the verification script to ensure both Ul
 python tests/verify_install.py
 ```
 
-### B. Check the Output:
+### B. Run Inference Test:
 
-A successful run will display your system's PyTorch/CUDA details and end with messages confirming that both installations are OK:
+Test that all model types work correctly:
 
 ```bash
-...
+# Add a test image at tests/images/test.png or test.jpg
+python tests/test_inference.py
+```
+
+This will test YOLO, YOLO OBB, and MMRotate models, generating:
+- Detection results in `tests/output/inference_results.json`
+- Annotated images in `tests/output/*.jpg`
+
+### C. Check the Output:
+
+A successful verification will display:
+
+```bash
 ✅ Ultralytics installation is OK.
-...
 ✅ MMRotate installation is OK.
-...
 Verification complete.
 ```

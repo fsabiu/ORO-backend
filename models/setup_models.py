@@ -20,12 +20,25 @@ import json
 import yaml
 import urllib.request
 import argparse
+import tempfile
+import shutil
+import subprocess
 from pathlib import Path
 from typing import List, Dict, Any
 
 # Define the models directory
 MODELS_DIR = Path(__file__).parent
 CONFIG_FILE = MODELS_DIR / "models_config.yaml"
+
+# MMRotate model to config mapping
+MMROTATE_CONFIGS = {
+    "mm-oriented-rcnn-r50": "configs/oriented_rcnn/oriented_rcnn_r50_fpn_1x_dota_le90.py",
+    "mm-rotated-retinanet-r50": "configs/rotated_retinanet/rotated_retinanet_obb_r50_fpn_1x_dota_le90.py",
+    "mm-roi-transformer-r50": "configs/roi_trans/roi_trans_r50_fpn_1x_dota_le90.py",
+    "mm-s2anet-r50": "configs/s2anet/s2anet_r50_fpn_1x_dota_le135.py",
+    "mm-gliding-vertex-r50": "configs/gliding_vertex/gliding_vertex_r50_fpn_1x_dota_le90.py",
+    "mm-rotated-fcos-r50": "configs/rotated_fcos/rotated_fcos_sep_angle_r50_fpn_1x_dota_le90.py",
+}
 
 
 def load_config() -> Dict[str, Any]:
@@ -73,6 +86,109 @@ def get_next_model_id() -> int:
                     continue
     
     return max_id + 1
+
+
+def clone_mmrotate_repo(temp_path: Path) -> bool:
+    """
+    Clone MMRotate repository to temporary directory.
+    
+    Args:
+        temp_path: Temporary directory path
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        print(f"  Cloning MMRotate repository...")
+        result = subprocess.run(
+            ["git", "clone", "--depth", "1", "https://github.com/open-mmlab/mmrotate.git", str(temp_path / "mmrotate")],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        
+        if result.returncode != 0:
+            print(f"  ✗ Failed to clone repository: {result.stderr}")
+            return False
+        
+        print(f"  ✓ Repository cloned")
+        return True
+        
+    except subprocess.TimeoutExpired:
+        print(f"  ✗ Git clone timeout")
+        return False
+    except Exception as e:
+        print(f"  ✗ Error cloning repository: {e}")
+        return False
+
+
+def copy_base_configs(mmrotate_repo_path: Path) -> bool:
+    """
+    Copy base config files from MMRotate repository.
+    
+    Args:
+        mmrotate_repo_path: Path to cloned MMRotate repository
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        source_base = mmrotate_repo_path / "configs" / "_base_"
+        dest_base = MODELS_DIR / "_base_"
+        
+        # Remove existing _base_ directory if it exists
+        if dest_base.exists():
+            shutil.rmtree(dest_base)
+        
+        # Copy entire _base_ directory
+        shutil.copytree(source_base, dest_base)
+        
+        print(f"  ✓ Copied base configs to {dest_base}")
+        return True
+        
+    except Exception as e:
+        print(f"  ✗ Error copying base configs: {e}")
+        return False
+
+
+def copy_mmrotate_config(folder_name: str, model_folder: Path, mmrotate_repo_path: Path) -> bool:
+    """
+    Copy MMRotate config file from cloned repository to model folder.
+    
+    Args:
+        folder_name: Model folder name
+        model_folder: Path to model folder
+        mmrotate_repo_path: Path to cloned MMRotate repository
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    if folder_name not in MMROTATE_CONFIGS:
+        return False
+    
+    config_relative_path = MMROTATE_CONFIGS[folder_name]
+    
+    try:
+        # Copy config file
+        source_config = mmrotate_repo_path / config_relative_path
+        dest_config = model_folder / "config.py"
+        
+        if not source_config.exists():
+            print(f"    ✗ Config file not found: {config_relative_path}")
+            return False
+        
+        shutil.copy2(source_config, dest_config)
+        
+        if dest_config.exists():
+            print(f"    ✓ Config file copied")
+            return True
+        else:
+            print(f"    ✗ Failed to copy config file")
+            return False
+            
+    except Exception as e:
+        print(f"    ✗ Error: {e}")
+        return False
 
 
 def download_file(url: str, destination: Path, model_name: str) -> bool:
@@ -159,6 +275,9 @@ def create_model_folder(model_info: Dict[str, Any], model_id: int) -> bool:
         json.dump(metadata, f, indent=4)
     
     print(f"  ✓ Created metadata.json")
+    
+    # Config file will be handled in main() for MMRotate models
+    
     print(f"  ✓ Model setup complete")
     
     return True
@@ -307,12 +426,58 @@ Examples:
                 print(f"  ✗ Error setting up {model_info['name']}: {e}")
                 failed += 1
         
+        # Handle MMRotate configs after all models are set up
+        mm_models = [m for m in models if m['folder_name'].startswith('mm-')]
+        if mm_models:
+            print("\n" + "="*60)
+            print("Setting up MMRotate Configs")
+            print("="*60)
+            print(f"Found {len(mm_models)} MMRotate models")
+            print()
+            
+            # Clone repository once
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                
+                if clone_mmrotate_repo(temp_path):
+                    mmrotate_repo = temp_path / "mmrotate"
+                    
+                    # Copy base configs first
+                    print("\nCopying base config files...")
+                    if copy_base_configs(mmrotate_repo):
+                        print("✓ Base configs copied successfully")
+                    else:
+                        print("✗ Failed to copy base configs")
+                    
+                    # Copy configs for each model
+                    print("\nCopying model-specific configs...")
+                    config_success = 0
+                    config_failed = 0
+                    
+                    for model_info in mm_models:
+                        folder_name = model_info['folder_name']
+                        model_folder = MODELS_DIR / folder_name
+                        
+                        print(f"  {model_info['name']}...")
+                        if copy_mmrotate_config(folder_name, model_folder, mmrotate_repo):
+                            config_success += 1
+                        else:
+                            config_failed += 1
+                    
+                    print()
+                    print(f"Model configs: {config_success} successful, {config_failed} failed")
+                    if config_failed > 0:
+                        print(f"Note: Models without configs will not work")
+                else:
+                    print("✗ Failed to clone MMRotate repository")
+                    print("MMRotate models will not work without config files")
+                    print("You can retry later with: ./download_mmrotate_configs.sh")
+        
         # Summary
         print("\n" + "="*60)
         print("Setup Summary")
         print("="*60)
-        print(f"Successful: {successful}")
-        print(f"Failed: {failed}")
+        print(f"Models: {successful} successful, {failed} failed")
         print(f"Total: {len(models)}")
         print("="*60)
         

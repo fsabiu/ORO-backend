@@ -371,7 +371,7 @@ class ReportService:
         # Insert the report with initial status
         query = """
             INSERT INTO REPORTS (name, status, bucket_img_path, area_of_interest, author)
-            VALUES (:name, 'pending', :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
+            VALUES (:name, 'initiating', :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
         """
         
         params = {

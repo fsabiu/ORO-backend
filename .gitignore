@@ -1,8 +1,10 @@
 db/wallet_oro.zip
 .conda
 models/*/*.pt
-
+models/_base_/*
 *.pyc
+tests/output/*
+tests/images/*
 
 #Pycache
 app/__pycache__/
