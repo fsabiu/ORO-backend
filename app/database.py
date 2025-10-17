@@ -370,4 +370,6 @@ def get_database():
     Returns:
         Database: Database instance for dependency injection
     """
-    return Database()
+    db = Database()
+    db.connect()
+    return db

@@ -23,7 +23,9 @@ from ..models import (
 
 def get_database() -> Database:
     """Dependency to get database connection."""
-    return Database()
+    db = Database()
+    db.connect()
+    return db
 
 
 def get_ruleset_service(db: Database = Depends(get_database)) -> RulesetService:
