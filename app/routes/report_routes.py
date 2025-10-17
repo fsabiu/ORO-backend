@@ -100,6 +100,55 @@ async def get_report(
         )
 
 
+@router.get("/{report_id}/overlapping", response_model=ReportListResponse)
+async def get_overlapping_reports(
+    report_id: int,
+    db=Depends(get_database)
+):
+    """
+    Get all reports whose area_of_interest overlaps with the specified report.
+    
+    Uses Oracle Spatial's SDO_ANYINTERACT function to perform efficient
+    geometric intersection queries. Only returns reports that have a defined
+    area_of_interest that spatially intersects with the target report's area.
+    
+    Args:
+        report_id: Report ID to find overlaps with
+        db: Database dependency
+        
+    Returns:
+        List of overlapping reports with pagination info
+        
+    Raises:
+        HTTPException: If report not found, has no area_of_interest, or error occurs
+    """
+    try:
+        service = ReportService(db)
+        overlapping_reports = service.get_overlapping_reports(report_id)
+        
+        return ReportListResponse(
+            reports=overlapping_reports,
+            total=len(overlapping_reports),
+            page=1,
+            per_page=len(overlapping_reports)
+        )
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Report with ID {report_id} not found"
+            )
+        elif "does not have an area_of_interest" in str(e):
+            raise HTTPException(
+                status_code=400,
+                detail=str(e)
+            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error finding overlapping reports: {str(e)}"
+        )
+
+
 @router.post("/", response_model=ReportCreationResponse, status_code=202)
 async def create_report(
     report_data: ReportCreate,

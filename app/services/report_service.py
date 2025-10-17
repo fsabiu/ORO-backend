@@ -61,7 +61,7 @@ class ReportService:
         # Execute the insert
         cursor = self.db.connection.cursor()
         cursor.execute(query, params)
-        self.db.connection.commit()  # CRITICAL: Commit the transaction
+        self.db.connection.commit()  
         cursor.close()
         
         # Get the generated ID by querying the last inserted record
@@ -297,6 +297,69 @@ class ReportService:
         affected_rows = self.db.execute_update(query, {'report_id': report_id})
         
         return affected_rows > 0
+    
+    def get_overlapping_reports(self, report_id: int) -> List[ReportResponse]:
+        """
+        Get all reports whose area_of_interest overlaps with the specified report.
+        
+        Uses Oracle Spatial's SDO_ANYINTERACT function to find geometric overlaps.
+        Only returns reports that have a defined area_of_interest.
+        
+        Args:
+            report_id: Report ID to find overlaps with
+            
+        Returns:
+            List of overlapping reports
+            
+        Raises:
+            Exception: If report not found or has no area_of_interest
+        """
+        # First, get the target report and verify it has an area_of_interest
+        target_report = self.get_report(report_id)
+        
+        if not target_report.area_of_interest:
+            raise Exception(f"Report {report_id} does not have an area_of_interest defined")
+        
+        # Query for overlapping reports using Oracle Spatial function
+        query = """
+            SELECT r2.id, r2.name, r2.status, r2.timestamp, r2.bucket_img_path, 
+                   r2.image_footprint, r2.area_of_interest, r2.author, r2.created_at, r2.updated_at
+            FROM REPORTS r1, REPORTS r2
+            WHERE r1.id = :report_id
+            AND r2.id != :report_id
+            AND r1.area_of_interest IS NOT NULL
+            AND r2.area_of_interest IS NOT NULL
+            AND SDO_ANYINTERACT(r1.area_of_interest, r2.area_of_interest) = 'TRUE'
+            ORDER BY r2.created_at DESC
+        """
+        
+        results = self.db.execute_query(query, {'report_id': report_id})
+        
+        overlapping_reports = []
+        for result in results:
+            # Convert SDO_GEOMETRY to GeoJSON format if present
+            image_footprint = None
+            if result['IMAGE_FOOTPRINT']:
+                image_footprint = self._sdo_to_geometry(result['IMAGE_FOOTPRINT'])
+            
+            area_of_interest = None
+            if result['AREA_OF_INTEREST']:
+                area_of_interest = self._sdo_to_geometry(result['AREA_OF_INTEREST'])
+            
+            overlapping_reports.append(ReportResponse(
+                id=result['ID'],
+                name=result['NAME'],
+                status=result['STATUS'],
+                timestamp=result['TIMESTAMP'],
+                bucket_img_path=result['BUCKET_IMG_PATH'],
+                image_footprint=image_footprint,
+                area_of_interest=area_of_interest,
+                author=result['AUTHOR'],
+                created_at=result['CREATED_AT'],
+                updated_at=result['UPDATED_AT']
+            ))
+        
+        return overlapping_reports
     
     def create_report_with_processing(self, report_data: ReportCreate) -> Dict[str, Any]:
         """
