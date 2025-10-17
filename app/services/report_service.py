@@ -39,27 +39,29 @@ class ReportService:
         Raises:
             Exception: If creation fails
         """
-        # Convert geometry to Oracle SDO_GEOMETRY format if provided
-        sdo_geometry = None
+        # Build the query with or without geometry
         if report_data.area_of_interest:
-            sdo_geometry = self._geometry_to_sdo(report_data.area_of_interest)
-        
-        # Insert the report
-        query = """
-            INSERT INTO REPORTS (name, bucket_img_path, area_of_interest, author)
-            VALUES (:name, :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
-        """
+            sdo_geometry_sql = self._geometry_to_sdo(report_data.area_of_interest)
+            query = f"""
+                INSERT INTO REPORTS (name, bucket_img_path, area_of_interest, author)
+                VALUES (:name, :bucket_img_path, {sdo_geometry_sql}, :author)
+            """
+        else:
+            query = """
+                INSERT INTO REPORTS (name, bucket_img_path, area_of_interest, author)
+                VALUES (:name, :bucket_img_path, NULL, :author)
+            """
         
         params = {
             'name': report_data.name,
             'bucket_img_path': report_data.bucket_img_path,
-            'sdo_geometry': sdo_geometry,
             'author': report_data.author
         }
         
         # Execute the insert
         cursor = self.db.connection.cursor()
         cursor.execute(query, params)
+        self.db.connection.commit()  # CRITICAL: Commit the transaction
         cursor.close()
         
         # Get the generated ID by querying the last inserted record
@@ -101,7 +103,7 @@ class ReportService:
             Exception: If report not found
         """
         query = """
-            SELECT id, name, status, timestamp, bucket_img_path, area_of_interest, author, created_at, updated_at
+            SELECT id, name, status, timestamp, bucket_img_path, image_footprint, area_of_interest, author, created_at, updated_at
             FROM REPORTS
             WHERE id = :report_id
         """
@@ -114,6 +116,10 @@ class ReportService:
         report = result[0]
         
         # Convert SDO_GEOMETRY to GeoJSON format if present
+        image_footprint = None
+        if report['IMAGE_FOOTPRINT']:
+            image_footprint = self._sdo_to_geometry(report['IMAGE_FOOTPRINT'])
+        
         area_of_interest = None
         if report['AREA_OF_INTEREST']:
             area_of_interest = self._sdo_to_geometry(report['AREA_OF_INTEREST'])
@@ -124,6 +130,7 @@ class ReportService:
             status=report['STATUS'],
             timestamp=report['TIMESTAMP'],
             bucket_img_path=report['BUCKET_IMG_PATH'],
+            image_footprint=image_footprint,
             area_of_interest=area_of_interest,
             author=report['AUTHOR'],
             created_at=report['CREATED_AT'],
@@ -168,7 +175,7 @@ class ReportService:
         
         # Get reports
         query = f"""
-            SELECT id, name, status, timestamp, bucket_img_path, area_of_interest, author, created_at, updated_at
+            SELECT id, name, status, timestamp, bucket_img_path, image_footprint, area_of_interest, author, created_at, updated_at
             FROM REPORTS
             {where_clause}
             ORDER BY created_at DESC
@@ -180,6 +187,10 @@ class ReportService:
         reports = []
         for result in results:
             # Convert SDO_GEOMETRY to GeoJSON format if present
+            image_footprint = None
+            if result['IMAGE_FOOTPRINT']:
+                image_footprint = self._sdo_to_geometry(result['IMAGE_FOOTPRINT'])
+            
             area_of_interest = None
             if result['AREA_OF_INTEREST']:
                 area_of_interest = self._sdo_to_geometry(result['AREA_OF_INTEREST'])
@@ -190,6 +201,7 @@ class ReportService:
                 status=result['STATUS'],
                 timestamp=result['TIMESTAMP'],
                 bucket_img_path=result['BUCKET_IMG_PATH'],
+                image_footprint=image_footprint,
                 area_of_interest=area_of_interest,
                 author=result['AUTHOR'],
                 created_at=result['CREATED_AT'],
@@ -236,10 +248,14 @@ class ReportService:
             update_fields.append("bucket_img_path = :bucket_img_path")
             params['bucket_img_path'] = report_data.bucket_img_path
         
+        # Note: Geometry updates need to be handled separately due to SQL construction
+        # For now, we'll skip geometry updates in this method
+        # TODO: Implement proper geometry update handling
+        if report_data.image_footprint is not None:
+            raise ValueError("Updating image_footprint is not yet supported. Please use a dedicated endpoint.")
+        
         if report_data.area_of_interest is not None:
-            sdo_geometry = self._geometry_to_sdo(report_data.area_of_interest)
-            update_fields.append("area_of_interest = SDO_GEOMETRY(:sdo_geometry)")
-            params['sdo_geometry'] = sdo_geometry
+            raise ValueError("Updating area_of_interest is not yet supported. Please use a dedicated endpoint.")
         
         if report_data.author is not None:
             update_fields.append("author = :author")
@@ -363,27 +379,29 @@ class ReportService:
         Returns:
             ID of the created report
         """
-        # Convert geometry to Oracle SDO_GEOMETRY format if provided
-        sdo_geometry = None
+        # Build the query with or without geometry
         if report_data.area_of_interest:
-            sdo_geometry = self._geometry_to_sdo(report_data.area_of_interest)
-        
-        # Insert the report with initial status
-        query = """
-            INSERT INTO REPORTS (name, status, bucket_img_path, area_of_interest, author)
-            VALUES (:name, 'initiating', :bucket_img_path, SDO_GEOMETRY(:sdo_geometry), :author)
-        """
+            sdo_geometry_sql = self._geometry_to_sdo(report_data.area_of_interest)
+            query = f"""
+                INSERT INTO REPORTS (name, status, bucket_img_path, area_of_interest, author)
+                VALUES (:name, 'initiating', :bucket_img_path, {sdo_geometry_sql}, :author)
+            """
+        else:
+            query = """
+                INSERT INTO REPORTS (name, status, bucket_img_path, area_of_interest, author)
+                VALUES (:name, 'initiating', :bucket_img_path, NULL, :author)
+            """
         
         params = {
             'name': report_data.report_name,
             'bucket_img_path': report_data.image_name,
-            'sdo_geometry': sdo_geometry,
             'author': report_data.author_id
         }
         
         # Execute the insert
         cursor = self.db.connection.cursor()
         cursor.execute(query, params)
+        self.db.connection.commit()  # CRITICAL: Commit the transaction
         cursor.close()
         
         # Get the generated ID by querying the last inserted record

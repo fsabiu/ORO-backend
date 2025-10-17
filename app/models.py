@@ -288,6 +288,7 @@ class ReportUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255, description="Report name")
     status: Optional[str] = Field(None, description="Processing status")
     bucket_img_path: Optional[str] = Field(None, min_length=1, max_length=512, description="Path to the image in the bucket")
+    image_footprint: Optional[GeometryBase] = Field(None, description="Full geographic extent of the entire GeoTIFF file")
     area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
     author: Optional[str] = Field(None, min_length=1, max_length=255, description="Author name")
     
@@ -307,6 +308,7 @@ class ReportResponse(BaseModel):
     status: str = Field(..., description="Processing status")
     timestamp: Optional[datetime] = Field(None, description="Processing timestamp")
     bucket_img_path: str = Field(..., description="Path to the image in the bucket")
+    image_footprint: Optional[GeometryBase] = Field(None, description="Full geographic extent of the entire GeoTIFF file")
     area_of_interest: Optional[GeometryBase] = Field(None, description="Geographic area of interest")
     author: str = Field(..., description="Author name")
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
@@ -321,6 +323,16 @@ class ReportResponse(BaseModel):
                 "status": "completed",
                 "timestamp": "2024-01-15T10:30:00Z",
                 "bucket_img_path": "images/urban_analysis_2024_01_15.tif",
+                "image_footprint": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [-74.0060, 40.7127],
+                        [-73.9351, 40.7127],
+                        [-73.9351, 40.7590],
+                        [-74.0060, 40.7590],
+                        [-74.0060, 40.7127]
+                    ]]
+                },
                 "area_of_interest": {
                     "type": "Polygon",
                     "coordinates": [[
